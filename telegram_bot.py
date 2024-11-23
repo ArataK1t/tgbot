@@ -34,7 +34,7 @@ def get_container_status():
 
 # Функция для проверки статусов контейнеров и отправки уведомлений
 def check_container_health_and_notify(context):
-    global container_states
+    global container_states, notification_messages
 
     # Получаем список всех контейнеров
     containers = client.containers.list(all=True)
@@ -48,14 +48,17 @@ def check_container_health_and_notify(context):
             container_states[container_name] = current_status  # Обновляем состояние
 
             if current_status in ['exited', 'stopped', 'unhealthy']:
-                # Отправляем уведомление только для проблемных состояний
-                message = f"❗ Контейнер {container_name} в состоянии {current_status}."
+                message = f"U+2757 Контейнер {container_name} в состоянии {current_status}."
                 add_notification_to_history(message)
-                context.bot.send_message(
+
+                # Отправляем сообщение с уведомлением
+                sent_message = context.bot.send_message(
                     chat_id=context.job.context['chat_id'],
                     text=message,
                     disable_notification=False
                 )
+                # Добавляем ID сообщения в список для удаления
+                notification_messages.append(sent_message.message_id)
 
         # Если контейнер вернулся в нормальное состояние (например, running), обновляем состояние
         elif current_status == 'running' and container_name in notified_containers:
