@@ -48,7 +48,7 @@ def check_container_health_and_notify(context):
             container_states[container_name] = current_status  # Обновляем состояние
 
             if current_status in ['exited', 'stopped', 'unhealthy']:
-                message = f"U+2757 Контейнер {container_name} в состоянии {current_status}."
+                message = f"\u2757 Контейнер {container_name} в состоянии {current_status}."
                 add_notification_to_history(message)
 
                 # Отправляем сообщение с уведомлением
