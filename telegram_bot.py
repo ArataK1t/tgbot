@@ -35,7 +35,7 @@ def check_container_health_and_notify(context):
     containers = client.containers.list(all=True)
     for container in containers:
         # Проверяем статусы контейнеров: 'exited', 'stopped' или 'unhealthy'
-       if container.status in ['exited', 'stopped', 'unhealthy']:
+        if container.status in ['exited', 'stopped', 'unhealthy']:
             if container.name not in notified_containers:
                 message = f"❗ Контейнер {container.name} в состоянии {container.status}."
                 add_notification_to_history(message)
