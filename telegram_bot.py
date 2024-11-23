@@ -61,12 +61,23 @@ def check_container_health_and_notify(context):
             notified_containers.remove(container_name)
 
 def clear_notification_history(update: Update, context):
-    global notification_history
+    global notification_history, notification_messages
     query = update.callback_query
     query.answer()
-    
-    # Очищаем историю
+
+    # Очищаем историю уведомлений
     notification_history = []
+
+    # Удаляем все сообщения с уведомлениями
+    for message_id in notification_messages:
+        try:
+            context.bot.delete_message(chat_id=query.message.chat_id, message_id=message_id)
+        except Exception as e:
+            # Логирование ошибки на русском языке
+            query.edit_message_text(f"Ошибка при удалении сообщений: {e}", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("\u2b05 Назад", callback_data='back_to_menu')]]))
+
+    # Очищаем список сообщений
+    notification_messages.clear()
 
     # Возвращаем обновленный текст истории
     query.edit_message_text(
