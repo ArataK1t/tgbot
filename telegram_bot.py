@@ -29,6 +29,16 @@ def get_container_status():
     status = "\n".join([f"{c.name}: {c.status}" for c in containers])
     return status
 
+# Функция для проверки статусов контейнеров и отправки уведомлений
+def check_container_health_and_notify(context):
+    containers = client.containers.list(all=True)
+    for container in containers:
+        # Проверяем статусы контейнеров: 'exited', 'stopped' или 'unhealthy'
+        if container.status in ['exited', 'stopped', 'unhealthy']:
+            message = f"❗ Контейнер {container.name} в состоянии {container.status}."
+            add_notification_to_history(message)
+            context.bot.send_message(chat_id=context.job.context['chat_id'], text=message)
+
 # Функция для получения последних строк из screen-сессий
 def get_screen_logs(session_name, lines=20):
     try:
@@ -203,6 +213,9 @@ def main():
 
     dispatcher.add_handler(CommandHandler('start', start))
     dispatcher.add_handler(CallbackQueryHandler(button))
+
+    job_queue = updater.job_queue
+    job_queue.run_repeating(check_container_health_and_notify, interval=60, first=0, context={'chat_id': 'your_chat_id'})
 
     updater.start_polling()
     updater.idle()
