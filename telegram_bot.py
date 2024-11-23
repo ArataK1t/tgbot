@@ -60,6 +60,20 @@ def check_container_health_and_notify(context):
         elif current_status == 'running' and container_name in notified_containers:
             notified_containers.remove(container_name)
 
+def clear_notification_history(update: Update, context):
+    global notification_history
+    query = update.callback_query
+    query.answer()
+    
+    # Очищаем историю
+    notification_history = []
+
+    # Возвращаем обновленный текст истории
+    query.edit_message_text(
+        "История уведомлений очищена.",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("\u2b05 Назад", callback_data='back_to_menu')]])
+    )
+
 # Функция для получения последних строк из screen-сессий
 def get_screen_logs(session_name, lines=20):
     try:
@@ -184,7 +198,11 @@ def show_notification_history(update: Update, context):
     query.answer()
 
     history_text = "\n".join(notification_history) if notification_history else "История пуста."
-    query.edit_message_text(f"История уведомлений:\n{history_text}", reply_markup=back_button())
+    keyboard = [
+        [InlineKeyboardButton("\ud83d\uddd1\ufe0f Очистить историю", callback_data='clear_notification_history')],
+        [InlineKeyboardButton("\u2b05 Назад", callback_data='back_to_menu')]
+    ]
+    query.edit_message_text(f"История уведомлений:\n{history_text}", reply_markup=InlineKeyboardMarkup(keyboard))
 
 # Остановка задач для чата
 def stop_job_for_chat(chat_id):
@@ -219,6 +237,8 @@ def button(update: Update, context):
         show_screen_logs(update, context)
     elif query.data == 'notification_history':
         show_notification_history(update, context)
+    elif query.data == 'clear_notification_history':
+        clear_notification_history(update, context)    
     elif query.data == 'back_to_menu':
         back_to_menu(update, context)
     elif query.data == 'help':
