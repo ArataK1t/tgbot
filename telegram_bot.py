@@ -12,6 +12,7 @@ client = docker.from_env()
 active_jobs = {}
 notification_history = []
 notified_containers = set()
+container_states = {}
 
 # Функция для получения системных метрик
 def get_system_metrics():
@@ -32,22 +33,32 @@ def get_container_status():
 
 # Функция для проверки статусов контейнеров и отправки уведомлений
 def check_container_health_and_notify(context):
+    global container_states
+
+    # Получаем список всех контейнеров
     containers = client.containers.list(all=True)
+
     for container in containers:
-        # Проверяем статусы контейнеров: 'exited', 'stopped' или 'unhealthy'
-        if container.status in ['exited', 'stopped', 'unhealthy']:
-            if container.name not in notified_containers:
-                message = f"❗ Контейнер {container.name} в состоянии {container.status}."
+        container_name = container.name
+        current_status = container.status
+
+        # Если контейнер новый или его состояние изменилось
+        if container_name not in container_states or container_states[container_name] != current_status:
+            container_states[container_name] = current_status  # Обновляем состояние
+
+            if current_status in ['exited', 'stopped', 'unhealthy']:
+                # Отправляем уведомление только для проблемных состояний
+                message = f"❗ Контейнер {container_name} в состоянии {current_status}."
                 add_notification_to_history(message)
                 context.bot.send_message(
                     chat_id=context.job.context['chat_id'],
                     text=message,
                     disable_notification=False
                 )
-                notified_containers.add(container.name)
-        else:
-            if container.name in notified_containers:
-                notified_containers.remove(container.name)
+
+        # Если контейнер вернулся в нормальное состояние (например, running), обновляем состояние
+        elif current_status == 'running' and container_name in notified_containers:
+            notified_containers.remove(container_name)
 
 # Функция для получения последних строк из screen-сессий
 def get_screen_logs(session_name, lines=20):
@@ -218,6 +229,11 @@ def button(update: Update, context):
 
 # Запуск бота
 def main():
+    global container_states
+
+    containers = client.containers.list(all=True)
+    container_states = {container.name: container.status for container in containers}
+    
     updater = Updater("your_telegram_bot_token", use_context=True)
     dispatcher = updater.dispatcher
 
