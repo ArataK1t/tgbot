@@ -11,6 +11,7 @@ client = docker.from_env()
 # Глобальные переменные для отслеживания состояния
 active_jobs = {}
 notification_history = []
+notification_messages = []
 notified_containers = set()
 container_states = {}
 
