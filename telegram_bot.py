@@ -11,6 +11,7 @@ client = docker.from_env()
 # Глобальные переменные для отслеживания состояния
 active_jobs = {}
 notification_history = []
+notified_containers = set()
 
 # Функция для получения системных метрик
 def get_system_metrics():
@@ -34,10 +35,19 @@ def check_container_health_and_notify(context):
     containers = client.containers.list(all=True)
     for container in containers:
         # Проверяем статусы контейнеров: 'exited', 'stopped' или 'unhealthy'
-        if container.status in ['exited', 'stopped', 'unhealthy']:
-            message = f"❗ Контейнер {container.name} в состоянии {container.status}."
-            add_notification_to_history(message)
-            context.bot.send_message(chat_id=context.job.context['chat_id'], text=message)
+       if container.status in ['exited', 'stopped', 'unhealthy']:
+            if container.name not in notified_containers:
+                message = f"❗ Контейнер {container.name} в состоянии {container.status}."
+                add_notification_to_history(message)
+                context.bot.send_message(
+                    chat_id=context.job.context['chat_id'],
+                    text=message,
+                    disable_notification=False
+                )
+                notified_containers.add(container.name)
+        else:
+            if container.name in notified_containers:
+                notified_containers.remove(container.name)
 
 # Функция для получения последних строк из screen-сессий
 def get_screen_logs(session_name, lines=20):
